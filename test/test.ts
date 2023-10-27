@@ -1,6 +1,7 @@
 import { Entity, MikroORM, PrimaryKey, Property } from '@mikro-orm/core'
 import test, { afterEach, beforeEach } from 'node:test'
 import { LokijsDriver } from '../src/driver'
+import assert from 'assert'
 
 let orm: MikroORM
 
@@ -21,4 +22,10 @@ afterEach(async () => {
   await orm.close()
 })
 
-test('stub', () => {})
+test('insert one', async () => {
+  const id = await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  assert.strictEqual(id, 1)
+})

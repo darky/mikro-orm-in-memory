@@ -14,10 +14,13 @@ import {
 } from '@mikro-orm/core'
 import { LokijsPlatform } from './platform'
 import { LokijsConnection } from './connection'
+import Loki, { LokiMemoryAdapter } from 'lokijs'
 
 export class LokijsDriver extends DatabaseDriver<Connection> {
   protected override readonly connection = new LokijsConnection(this.config)
   protected override readonly platform = new LokijsPlatform()
+
+  private db = new Loki('db', { adapter: new LokiMemoryAdapter() })
 
   override async findOne<T extends object, P extends string = never>(
     entityName: string,
@@ -40,7 +43,12 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     data: EntityDictionary<T>,
     options?: NativeInsertUpdateOptions<T> | undefined
   ): Promise<QueryResult<T>> {
-    return null as any
+    const collection = this.db.getCollection(entityName) ?? this.db.addCollection(entityName)
+    const doc = collection.insert(data)
+    return {
+      affectedRows: 1,
+      insertId: doc[this.getMetadata().get(entityName).primaryKeys[0] ?? ''],
+    }
   }
 
   override nativeInsertMany<T extends object>(
