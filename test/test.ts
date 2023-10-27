@@ -22,7 +22,7 @@ afterEach(async () => {
   await orm.close()
 })
 
-test('insert one', async () => {
+test('basic insert one', async () => {
   const id = await orm.em.fork().insert(TestEntity, {
     id: 1,
     value: 'test',
@@ -30,7 +30,7 @@ test('insert one', async () => {
   assert.strictEqual(id, 1)
 })
 
-test('find one', async () => {
+test('basic find one', async () => {
   await orm.em.fork().insert(TestEntity, {
     id: 1,
     value: 'test',
@@ -40,7 +40,7 @@ test('find one', async () => {
   assert.strictEqual(doc.value, 'test')
 })
 
-test('find', async () => {
+test('basic find', async () => {
   await orm.em.fork().insert(TestEntity, {
     id: 1,
     value: 'test',
@@ -49,4 +49,15 @@ test('find', async () => {
   assert.strictEqual(docs.length, 1)
   assert.strictEqual(docs[0]?.id, 1)
   assert.strictEqual(docs[0]?.value, 'test')
+})
+
+test('physical removing', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const id = await orm.em.fork().nativeDelete(TestEntity, { id: 1 })
+  assert.strictEqual(id, 1)
+  const docs = await orm.em.fork().find(TestEntity, {})
+  assert.strictEqual(docs.length, 0)
 })

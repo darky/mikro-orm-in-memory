@@ -43,11 +43,11 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     data: EntityDictionary<T>,
     options?: NativeInsertUpdateOptions<T> | undefined
   ): Promise<QueryResult<T>> {
-    const collection = this.db.getCollection(entityName) ?? this.db.addCollection(entityName)
+    const collection = this._collection(entityName)
     const doc = collection.insert(data)
     return {
       affectedRows: 1,
-      insertId: doc[this.getMetadata().get(entityName).primaryKeys[0] ?? ''],
+      insertId: this._pkValue(entityName, doc),
     }
   }
 
@@ -73,7 +73,14 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: DeleteOptions<T> | undefined
   ): Promise<QueryResult<T>> {
-    return null as any
+    const collection = this._collection(entityName)
+    const docs = await this._find(entityName, where)
+    docs.forEach(doc => collection.remove(doc))
+    return {
+      affectedRows: docs.length,
+      insertId: this._pkValue(entityName, docs[0] ?? {}),
+      insertedIds: docs.map(doc => this._pkValue(entityName, doc)),
+    }
   }
 
   override async count<T extends object, P extends string = never>(
@@ -89,11 +96,19 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
-    const collection = this.db.getCollection<T>(entityName)
+    const collection = this._collection(entityName)
     return collection
       .chain()
       .find(where as any)
       .limit(1)
       .data()
+  }
+
+  private _collection(entityName: string) {
+    return this.db.getCollection(entityName) ?? this.db.addCollection(entityName)
+  }
+
+  private _pkValue<T>(entityName: string, doc: EntityData<T>) {
+    return Reflect.get(doc, this.getMetadata().get(entityName).primaryKeys[0] ?? '')
   }
 }
