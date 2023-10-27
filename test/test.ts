@@ -29,3 +29,24 @@ test('insert one', async () => {
   })
   assert.strictEqual(id, 1)
 })
+
+test('find one', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const doc = await orm.em.fork().findOne(TestEntity, { id: 1 })
+  assert.strictEqual(doc?.id, 1)
+  assert.strictEqual(doc.value, 'test')
+})
+
+test('find', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const docs = await orm.em.fork().find(TestEntity, {})
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.id, 1)
+  assert.strictEqual(docs[0]?.value, 'test')
+})

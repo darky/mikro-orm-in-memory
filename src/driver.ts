@@ -27,7 +27,7 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T> | null> {
-    return null
+    return (await this._find(entityName, where, options))[0] ?? null
   }
 
   override async find<T extends object, P extends string = never>(
@@ -35,7 +35,7 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: FindOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
-    return []
+    return await this._find(entityName, where, options)
   }
 
   override async nativeInsert<T extends object>(
@@ -82,5 +82,18 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     options?: CountOptions<T, P> | undefined
   ): Promise<number> {
     return 0
+  }
+
+  private async _find<T extends object, P extends string = never>(
+    entityName: string,
+    where: FilterQuery<T>,
+    options?: FindOneOptions<T, P> | undefined
+  ): Promise<EntityData<T>[]> {
+    const collection = this.db.getCollection<T>(entityName)
+    return collection
+      .chain()
+      .find(where as any)
+      .limit(1)
+      .data()
   }
 }
