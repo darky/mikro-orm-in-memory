@@ -16,6 +16,8 @@ class TestEntity {
 
 beforeEach(async () => {
   orm = await MikroORM.init({ dbName: 'test', driver: InMemoryDriver, entities: [TestEntity] })
+
+  await orm.getSchemaGenerator().clearDatabase()
 })
 
 afterEach(async () => {

@@ -12,6 +12,13 @@ export class InMemoryPlatform extends Platform {
       async ensureDatabase() {
         return true
       },
+      async dropSchema() {},
+      async createSchema() {},
+      async updateSchema() {},
+      async refreshDatabase() {},
+      clearDatabase: async () => {
+        this.db.clear()
+      },
     }
   }
 }
