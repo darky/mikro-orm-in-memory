@@ -108,6 +108,16 @@ test('$like query', async () => {
   assert.strictEqual(docs[0]?.value, 'test')
 })
 
+test('$like nested query', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const docs = await orm.em.fork().find(TestEntity, { $or: [{ value: { $like: 'tes%' } }] })
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.value, 'test')
+})
+
 test('current_timestamp', async () => {
   await orm.em.fork().insert(TestEntity, {
     id: 1,
