@@ -1,13 +1,33 @@
 {
   "name": "mikro-orm-in-memory",
   "version": "0.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "MikroORM in memory for unit tests",
+  "main": "./dist/src/index.js",
   "scripts": {
     "build": "rm -rf dist && npx tsc",
-    "test": "npm run build && node --test ./dist/test/test.js"
+    "test": "npm run build && node --test ./dist/test/test.js",
+    "prepublishOnly": "npm run build"
   },
-  "author": "",
+  "keywords": [
+    "mikroorm",
+    "mikro",
+    "orm",
+    "in-memory",
+    "in",
+    "memory",
+    "unit",
+    "test"
+  ],
+  "files": [
+    "dist/src/**/*.js",
+    "dist/src/**/*.d.ts"
+  ],
+  "types": "dist/src/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:darky/mikro-orm-in-memory.git"
+  },
+  "author": "Vladislav Botvin",
   "license": "MIT",
   "peerDependencies": {
     "@mikro-orm/core": "^5.9.0",
