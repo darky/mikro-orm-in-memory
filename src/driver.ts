@@ -12,15 +12,15 @@ import {
   NativeInsertUpdateOptions,
   QueryResult,
 } from '@mikro-orm/core'
-import { LokijsPlatform } from './platform'
-import { LokijsConnection } from './connection'
-import Loki, { LokiMemoryAdapter } from 'lokijs'
+import { InMemoryPlatform } from './platform'
+import { InMemoryConnection } from './connection'
+import { Query } from 'mingo'
 
-export class LokijsDriver extends DatabaseDriver<Connection> {
-  protected override readonly connection = new LokijsConnection(this.config)
-  protected override readonly platform = new LokijsPlatform()
+export class InMemoryDriver extends DatabaseDriver<Connection> {
+  protected override readonly connection = new InMemoryConnection(this.config)
+  protected override readonly platform = new InMemoryPlatform()
 
-  private db = new Loki('db', { adapter: new LokiMemoryAdapter() })
+  private db = new Map<string, EntityData<unknown>[]>()
 
   override async findOne<T extends object, P extends string = never>(
     entityName: string,
@@ -44,10 +44,14 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     options?: NativeInsertUpdateOptions<T> | undefined
   ): Promise<QueryResult<T>> {
     const collection = this._collection(entityName)
-    const doc = collection.insert(data)
+    const exists = new Query(this._pkWhere(entityName, data)).find(collection).all()
+    if (exists.length) {
+      throw new Error('exists')
+    }
+    collection.push(data)
     return {
       affectedRows: 1,
-      insertId: this._pkValue(entityName, doc),
+      insertId: this._pkValue(entityName, data),
     }
   }
 
@@ -59,13 +63,20 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     return null as any
   }
 
-  override nativeUpdate<T extends object>(
+  override async nativeUpdate<T extends object>(
     entityName: string,
     where: FilterQuery<T>,
     data: EntityDictionary<T>,
     options?: NativeInsertUpdateOptions<T> | undefined
   ): Promise<QueryResult<T>> {
-    return null as any
+    const collection = this._collection(entityName)
+    const docs = new Query(where as any).find<EntityData<T>[]>(collection).all()
+    docs.forEach(doc => Object.assign(doc, data))
+    return {
+      affectedRows: docs.length,
+      insertId: this._pkValue(entityName, docs[0] ?? {}),
+      insertedIds: docs.map(doc => this._pkValue(entityName, doc)),
+    }
   }
 
   override async nativeDelete<T extends object>(
@@ -74,12 +85,14 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     options?: DeleteOptions<T> | undefined
   ): Promise<QueryResult<T>> {
     const collection = this._collection(entityName)
-    const docs = await this._find(entityName, where)
-    docs.forEach(doc => collection.remove(doc))
+    const query = new Query(where as any)
+    const forRemove = query.find<EntityData<T>[]>(collection).all()
+    const collectionWithRemoved = query.remove(collection)
+    this.db.set(entityName, collectionWithRemoved)
     return {
-      affectedRows: docs.length,
-      insertId: this._pkValue(entityName, docs[0] ?? {}),
-      insertedIds: docs.map(doc => this._pkValue(entityName, doc)),
+      affectedRows: forRemove.length,
+      insertId: this._pkValue(entityName, forRemove[0] ?? {}),
+      insertedIds: forRemove.map(doc => this._pkValue(entityName, doc)),
     }
   }
 
@@ -88,7 +101,8 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: CountOptions<T, P> | undefined
   ): Promise<number> {
-    return 0
+    const collection = this._collection(entityName)
+    return new Query(where as any).find<EntityData<T>>(collection).count()
   }
 
   private async _find<T extends object, P extends string = never>(
@@ -97,18 +111,19 @@ export class LokijsDriver extends DatabaseDriver<Connection> {
     options?: FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
     const collection = this._collection(entityName)
-    return collection
-      .chain()
-      .find(where as any)
-      .limit(1)
-      .data()
+    return new Query(where as any).find<EntityData<T>>(collection).all()
   }
 
   private _collection(entityName: string) {
-    return this.db.getCollection(entityName) ?? this.db.addCollection(entityName)
+    return this.db.get(entityName) ?? this.db.set(entityName, []).get(entityName)!
   }
 
   private _pkValue<T>(entityName: string, doc: EntityData<T>) {
     return Reflect.get(doc, this.getMetadata().get(entityName).primaryKeys[0] ?? '')
+  }
+
+  private _pkWhere<T>(entityName: string, doc: EntityData<T>) {
+    const pks = new Set(this.getMetadata().get(entityName).primaryKeys)
+    return Object.fromEntries(Object.entries(doc).filter(([key]) => pks.has(key)))
   }
 }

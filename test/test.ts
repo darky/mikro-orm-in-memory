@@ -1,6 +1,6 @@
 import { Entity, MikroORM, PrimaryKey, Property } from '@mikro-orm/core'
 import test, { afterEach, beforeEach } from 'node:test'
-import { LokijsDriver } from '../src/driver'
+import { InMemoryDriver } from '../src/driver'
 import assert from 'assert'
 
 let orm: MikroORM
@@ -15,7 +15,7 @@ class TestEntity {
 }
 
 beforeEach(async () => {
-  orm = await MikroORM.init({ dbName: 'test', driver: LokijsDriver, entities: [TestEntity] })
+  orm = await MikroORM.init({ dbName: 'test', driver: InMemoryDriver, entities: [TestEntity] })
 })
 
 afterEach(async () => {
@@ -60,4 +60,24 @@ test('physical removing', async () => {
   assert.strictEqual(id, 1)
   const docs = await orm.em.fork().find(TestEntity, {})
   assert.strictEqual(docs.length, 0)
+})
+
+test('basic count', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const count = await orm.em.fork().count(TestEntity, { id: 1 })
+  assert.strictEqual(count, 1)
+})
+
+test('basic update', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const id = await orm.em.fork().nativeUpdate(TestEntity, { id: 1 }, { value: 'update-test' })
+  assert.strictEqual(id, 1)
+  const doc = await orm.em.fork().findOne(TestEntity, { id: 1 })
+  assert.strictEqual(doc?.value, 'update-test')
 })

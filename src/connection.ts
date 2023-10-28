@@ -1,6 +1,6 @@
 import { Connection } from '@mikro-orm/core'
 
-export class LokijsConnection extends Connection {
+export class InMemoryConnection extends Connection {
   override async connect(): Promise<void> {}
   override async isConnected(): Promise<boolean> {
     return true
