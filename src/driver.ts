@@ -14,8 +14,8 @@ import {
 import { InMemoryPlatform } from './platform'
 import { InMemoryConnection } from './connection'
 import { Query } from 'mingo'
-import { OperatorMap } from '@mikro-orm/core/typings'
-import omit from 'lodash.omit'
+import { flatten, unflatten } from 'flat'
+import { RawObject } from 'mingo/dist/types/types'
 
 export class InMemoryDriver extends DatabaseDriver<Connection> {
   constructor(config: Configuration<IDatabaseDriver<Connection>>, dependencies: string[] = []) {
@@ -145,19 +145,18 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
   }
 
   private _mikroORMtoMingoQuery<T>(query: FilterQuery<T>) {
-    return Object.fromEntries(
-      Object.entries(query).map(([key, query]) => [
-        key,
-        query && typeof query === 'object'
-          ? omit(
-              {
-                ...query,
-                ...((query as OperatorMap<T>).$like ? { $regex: (query.$like as string).replace(/\%/g, '.*') } : {}),
-              },
-              '$like'
-            )
-          : query,
-      ])
+    return unflatten<
+      {
+        [k: string]: any
+      },
+      RawObject
+    >(
+      Object.fromEntries(
+        Object.entries(flatten<FilterQuery<T>, FilterQuery<T>>(query)).map(([key, val]) => [
+          key.endsWith('.$like') ? key.replace(/\.\$like/g, '.$regex') : key,
+          key.endsWith('.$like') ? (val as string).replace(/\%/g, '.*') : val,
+        ])
+      )
     )
   }
 

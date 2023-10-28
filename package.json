@@ -30,12 +30,14 @@
   "author": "Vladislav Botvin",
   "license": "MIT",
   "peerDependencies": {
-    "@mikro-orm/core": "^5.9.0",
-    "lodash.omit": "^4.5.0",
+    "@mikro-orm/core": "^5.9.0"
+  },
+  "dependencies": {
+    "flat": "^5.0.2",
     "mingo": "^6.4.8"
   },
   "devDependencies": {
-    "@types/lodash.omit": "^4.5.8",
+    "@types/flat": "^5.0.4",
     "@types/node": "^20.8.9",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
