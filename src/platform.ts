@@ -1,13 +1,10 @@
-import { Connection, EntityManager, IDatabaseDriver, Platform } from '@mikro-orm/core'
+import { Platform } from '@mikro-orm/core'
 import { EntityData, ISchemaGenerator } from '@mikro-orm/core/typings'
 
 export class InMemoryPlatform extends Platform {
   db = new Map<string, EntityData<unknown>[]>()
 
-  override getSchemaGenerator(
-    driver: IDatabaseDriver<Connection>,
-    em?: EntityManager<IDatabaseDriver<Connection>> | undefined
-  ): ISchemaGenerator {
+  override getSchemaGenerator(): ISchemaGenerator {
     return {
       async ensureDatabase() {
         return true
@@ -15,10 +12,29 @@ export class InMemoryPlatform extends Platform {
       async dropSchema() {},
       async createSchema() {},
       async updateSchema() {},
+      async createDatabase() {},
+      async dropDatabase() {},
       async refreshDatabase() {},
       clearDatabase: async () => {
         this.db.clear()
       },
+      async generate() {
+        return ''
+      },
+      async getCreateSchemaSQL() {
+        return ''
+      },
+      async getDropSchemaSQL() {
+        return ''
+      },
+      async getUpdateSchemaSQL() {
+        return ''
+      },
+      async getUpdateSchemaMigrationSQL() {
+        return { up: '', down: '' }
+      },
+      async ensureIndexes() {},
+      async execute() {},
     }
   }
 }

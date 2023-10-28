@@ -9,10 +9,5 @@ export class InMemoryConnection extends Connection {
   override getDefaultClientUrl(): string {
     return 'http://test'
   }
-  override async execute<T>(
-    query: string,
-    params?: any[] | undefined,
-    method?: 'all' | 'get' | 'run' | undefined,
-    ctx?: any
-  ): Promise<any> {}
+  override async execute(): Promise<any> {}
 }

@@ -1,15 +1,14 @@
 import {
+  Configuration,
   Connection,
   CountOptions,
   DatabaseDriver,
-  DeleteOptions,
   EntityData,
   EntityDictionary,
   FilterQuery,
   FindOneOptions,
   FindOptions,
-  NativeInsertUpdateManyOptions,
-  NativeInsertUpdateOptions,
+  IDatabaseDriver,
   QueryResult,
 } from '@mikro-orm/core'
 import { InMemoryPlatform } from './platform'
@@ -19,6 +18,10 @@ import { OperatorMap } from '@mikro-orm/core/typings'
 import omit from 'lodash.omit'
 
 export class InMemoryDriver extends DatabaseDriver<Connection> {
+  constructor(config: Configuration<IDatabaseDriver<Connection>>, dependencies: string[] = []) {
+    super(config, dependencies)
+  }
+
   protected override readonly connection = new InMemoryConnection(this.config)
   protected override readonly platform = new InMemoryPlatform()
 
@@ -27,7 +30,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T> | null> {
-    return (await this._find(entityName, where, options))[0] ?? null
+    return this._find(entityName, where, options).next() ?? null
   }
 
   override async find<T extends object, P extends string = never>(
@@ -35,13 +38,12 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: FindOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
-    return await this._find(entityName, where, options)
+    return this._find(entityName, where, options).all()
   }
 
   override async nativeInsert<T extends object>(
     entityName: string,
-    data: EntityDictionary<T>,
-    options?: NativeInsertUpdateOptions<T> | undefined
+    data: EntityDictionary<T>
   ): Promise<QueryResult<T>> {
     const collection = this._collection(entityName)
     const exists = new Query(this._pkWhere(entityName, data)).find(collection).all()
@@ -55,19 +57,17 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     }
   }
 
-  override nativeInsertMany<T extends object>(
-    entityName: string,
-    data: EntityDictionary<T>[],
-    options?: NativeInsertUpdateManyOptions<T> | undefined
-  ): Promise<QueryResult<T>> {
+  override nativeInsertMany<T extends object>(): Promise<QueryResult<T>> {
+    // entityName: string,
+    // data: EntityDictionary<T>[],
+    // options?: NativeInsertUpdateManyOptions<T> | undefined
     return null as any
   }
 
   override async nativeUpdate<T extends object>(
     entityName: string,
     where: FilterQuery<T>,
-    data: EntityDictionary<T>,
-    options?: NativeInsertUpdateOptions<T> | undefined
+    data: EntityDictionary<T>
   ): Promise<QueryResult<T>> {
     const collection = this._collection(entityName)
     const docs = new Query(where as any).find<EntityData<T>[]>(collection).all()
@@ -79,11 +79,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     }
   }
 
-  override async nativeDelete<T extends object>(
-    entityName: string,
-    where: FilterQuery<T>,
-    options?: DeleteOptions<T> | undefined
-  ): Promise<QueryResult<T>> {
+  override async nativeDelete<T extends object>(entityName: string, where: FilterQuery<T>): Promise<QueryResult<T>> {
     const collection = this._collection(entityName)
     const query = new Query(where as any)
     const forRemove = query.find<EntityData<T>[]>(collection).all()
@@ -101,23 +97,24 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     where: FilterQuery<T>,
     options?: CountOptions<T, P> | undefined
   ): Promise<number> {
-    const collection = this._collection(entityName)
-    return new Query(where as any).find<EntityData<T>>(collection).count()
+    return this._find(entityName, where, options).count()
   }
 
-  private async _find<T extends object, P extends string = never>(
+  private _find<T extends object, P extends string = never>(
     entityName: string,
     where: FilterQuery<T>,
-    options?: FindOptions<T, P> | FindOneOptions<T, P> | undefined
-  ): Promise<EntityData<T>[]> {
+    options?: FindOptions<T, P> | FindOneOptions<T, P> | CountOptions<T, P> | undefined
+  ) {
     const collection = this._collection(entityName)
     const cursor = new Query(this._mikroORMtoMingoQuery(where)).find<EntityData<T>>(collection)
     const limit = (options as FindOptions<T, P>).limit
+    const orderBy = (options as FindOptions<T, P>).orderBy
+    const offset = (options as FindOptions<T, P>).offset
     if (limit) {
       cursor.limit(limit)
     }
-    if ((Array.isArray(options?.orderBy) && options?.orderBy.length) || Object.keys(options?.orderBy ?? {}).length) {
-      const sort = [options?.orderBy].flat().reduce(
+    if ((Array.isArray(orderBy) && orderBy.length) || Object.keys(orderBy ?? {}).length) {
+      const sort = [orderBy].flat().reduce(
         (acc, ob) => ({
           ...acc,
           [Object.keys(ob as object)?.[0]!]: (Object.values(ob as object)[0] as string).toLowerCase().startsWith('asc')
@@ -128,10 +125,10 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
       )
       cursor.sort(sort)
     }
-    if (options?.offset) {
-      cursor.skip(options.offset)
+    if (offset) {
+      cursor.skip(offset)
     }
-    return cursor.all()
+    return cursor
   }
 
   private _collection(entityName: string) {
