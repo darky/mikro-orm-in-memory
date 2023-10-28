@@ -2,6 +2,7 @@ import { Entity, MikroORM, PrimaryKey, Property } from '@mikro-orm/core'
 import test, { afterEach, beforeEach } from 'node:test'
 import { InMemoryDriver } from '../src/driver'
 import assert from 'assert'
+import { isDate } from 'util/types'
 
 let orm: MikroORM
 
@@ -12,6 +13,9 @@ class TestEntity {
 
   @Property()
   value!: string
+
+  @Property({ defaultRaw: 'current_timestamp' })
+  createdAt!: Date
 }
 
 beforeEach(async () => {
@@ -102,4 +106,13 @@ test('$like query', async () => {
   const docs = await orm.em.fork().find(TestEntity, { value: { $like: 'tes%' } })
   assert.strictEqual(docs.length, 1)
   assert.strictEqual(docs[0]?.value, 'test')
+})
+
+test('current_timestamp', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const doc = await orm.em.fork().findOne(TestEntity, { id: 1 })
+  assert.strictEqual(isDate(doc?.createdAt), true)
 })

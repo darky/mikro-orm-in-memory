@@ -17,7 +17,6 @@ import { InMemoryConnection } from './connection'
 import { Query } from 'mingo'
 import { OperatorMap } from '@mikro-orm/core/typings'
 import omit from 'lodash.omit'
-import { isObject } from 'util'
 
 export class InMemoryDriver extends DatabaseDriver<Connection> {
   protected override readonly connection = new InMemoryConnection(this.config)
@@ -49,7 +48,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     if (exists.length) {
       throw new Error('exists')
     }
-    collection.push(data)
+    collection.push(this._provideDefaults(entityName, data))
     return {
       affectedRows: 1,
       insertId: this._pkValue(entityName, data),
@@ -143,5 +142,18 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
           : query,
       ])
     )
+  }
+
+  private _provideDefaults<T>(entityName: string, data: EntityDictionary<T>) {
+    const defaults = this.getMetadata()
+      .get<T>(entityName)
+      .props.reduce(
+        (acc, prop) =>
+          prop.defaultRaw?.toLowerCase() === 'current_timestamp' && !data[prop.name]
+            ? { ...acc, [prop.name]: new Date() }
+            : acc,
+        {} as EntityDictionary<T>
+      )
+    return { ...defaults, ...data }
   }
 }
