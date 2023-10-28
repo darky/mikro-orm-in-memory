@@ -116,3 +116,43 @@ test('current_timestamp', async () => {
   const doc = await orm.em.fork().findOne(TestEntity, { id: 1 })
   assert.strictEqual(isDate(doc?.createdAt), true)
 })
+
+test('limit', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  await orm.em.fork().insert(TestEntity, {
+    id: 2,
+    value: 'test 2',
+  })
+  const docs = await orm.em.fork().find(TestEntity, {}, { limit: 1 })
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.id, 1)
+})
+
+test('orderBy desc', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  await orm.em.fork().insert(TestEntity, {
+    id: 2,
+    value: 'test 2',
+  })
+  const docs = await orm.em.fork().find(TestEntity, {}, { orderBy: { id: 'DESC' } })
+  assert.strictEqual(docs[0]?.id, 2)
+})
+
+test('orderBy asc', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  await orm.em.fork().insert(TestEntity, {
+    id: 2,
+    value: 'test 2',
+  })
+  const docs = await orm.em.fork().find(TestEntity, {}, { orderBy: { id: 'ASC' } })
+  assert.strictEqual(docs[0]?.id, 1)
+})

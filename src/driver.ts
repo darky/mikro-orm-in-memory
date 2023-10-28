@@ -108,10 +108,27 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
   private async _find<T extends object, P extends string = never>(
     entityName: string,
     where: FilterQuery<T>,
-    options?: FindOneOptions<T, P> | undefined
+    options?: FindOptions<T, P> | FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
     const collection = this._collection(entityName)
-    return new Query(this._mikroORMtoMingoQuery(where)).find<EntityData<T>>(collection).all()
+    const cursor = new Query(this._mikroORMtoMingoQuery(where)).find<EntityData<T>>(collection)
+    const limit = (options as FindOptions<T, P>).limit
+    if (limit) {
+      cursor.limit(limit)
+    }
+    if ((Array.isArray(options?.orderBy) && options?.orderBy.length) || Object.keys(options?.orderBy ?? {}).length) {
+      const sort = [options?.orderBy].flat().reduce(
+        (acc, ob) => ({
+          ...acc,
+          [Object.keys(ob as object)?.[0]!]: (Object.values(ob as object)[0] as string).toLowerCase().startsWith('asc')
+            ? 1
+            : -1,
+        }),
+        {}
+      )
+      cursor.sort(sort)
+    }
+    return cursor.all()
   }
 
   private _collection(entityName: string) {
