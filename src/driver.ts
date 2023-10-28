@@ -15,6 +15,9 @@ import {
 import { InMemoryPlatform } from './platform'
 import { InMemoryConnection } from './connection'
 import { Query } from 'mingo'
+import { OperatorMap } from '@mikro-orm/core/typings'
+import omit from 'lodash.omit'
+import { isObject } from 'util'
 
 export class InMemoryDriver extends DatabaseDriver<Connection> {
   protected override readonly connection = new InMemoryConnection(this.config)
@@ -109,7 +112,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     options?: FindOneOptions<T, P> | undefined
   ): Promise<EntityData<T>[]> {
     const collection = this._collection(entityName)
-    return new Query(where as any).find<EntityData<T>>(collection).all()
+    return new Query(this._mikroORMtoMingoQuery(where)).find<EntityData<T>>(collection).all()
   }
 
   private _collection(entityName: string) {
@@ -123,5 +126,22 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
   private _pkWhere<T>(entityName: string, doc: EntityData<T>) {
     const pks = new Set(this.getMetadata().get(entityName).primaryKeys)
     return Object.fromEntries(Object.entries(doc).filter(([key]) => pks.has(key)))
+  }
+
+  private _mikroORMtoMingoQuery<T>(query: FilterQuery<T>) {
+    return Object.fromEntries(
+      Object.entries(query).map(([key, query]) => [
+        key,
+        query && typeof query === 'object'
+          ? omit(
+              {
+                ...query,
+                ...((query as OperatorMap<T>).$like ? { $regex: (query.$like as string).replace(/\%/g, '.*') } : {}),
+              },
+              '$like'
+            )
+          : query,
+      ])
+    )
   }
 }

@@ -83,3 +83,23 @@ test('basic update', async () => {
   const doc = await orm.em.fork().findOne(TestEntity, { id: 1 })
   assert.strictEqual(doc?.value, 'update-test')
 })
+
+test('$in query', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const docs = await orm.em.fork().find(TestEntity, { id: { $in: [1] } })
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.value, 'test')
+})
+
+test('$like query', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  const docs = await orm.em.fork().find(TestEntity, { value: { $like: 'tes%' } })
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.value, 'test')
+})
