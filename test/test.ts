@@ -156,3 +156,17 @@ test('orderBy asc', async () => {
   const docs = await orm.em.fork().find(TestEntity, {}, { orderBy: { id: 'ASC' } })
   assert.strictEqual(docs[0]?.id, 1)
 })
+
+test('offset', async () => {
+  await orm.em.fork().insert(TestEntity, {
+    id: 1,
+    value: 'test',
+  })
+  await orm.em.fork().insert(TestEntity, {
+    id: 2,
+    value: 'test 2',
+  })
+  const docs = await orm.em.fork().find(TestEntity, {}, { offset: 1 })
+  assert.strictEqual(docs.length, 1)
+  assert.strictEqual(docs[0]?.id, 2)
+})

@@ -128,6 +128,9 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
       )
       cursor.sort(sort)
     }
+    if (options?.offset) {
+      cursor.skip(options.offset)
+    }
     return cursor.all()
   }
 
