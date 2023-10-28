@@ -20,8 +20,6 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
   protected override readonly connection = new InMemoryConnection(this.config)
   protected override readonly platform = new InMemoryPlatform()
 
-  private db = new Map<string, EntityData<unknown>[]>()
-
   override async findOne<T extends object, P extends string = never>(
     entityName: string,
     where: FilterQuery<T>,
@@ -88,7 +86,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
     const query = new Query(where as any)
     const forRemove = query.find<EntityData<T>[]>(collection).all()
     const collectionWithRemoved = query.remove(collection)
-    this.db.set(entityName, collectionWithRemoved)
+    this.platform.db.set(entityName, collectionWithRemoved)
     return {
       affectedRows: forRemove.length,
       insertId: this._pkValue(entityName, forRemove[0] ?? {}),
@@ -115,7 +113,7 @@ export class InMemoryDriver extends DatabaseDriver<Connection> {
   }
 
   private _collection(entityName: string) {
-    return this.db.get(entityName) ?? this.db.set(entityName, []).get(entityName)!
+    return this.platform.db.get(entityName) ?? this.platform.db.set(entityName, []).get(entityName)!
   }
 
   private _pkValue<T>(entityName: string, doc: EntityData<T>) {
