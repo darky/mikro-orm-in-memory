@@ -1,6 +1,6 @@
 {
   "name": "mikro-orm-in-memory",
-  "version": "0.0.18",
+  "version": "0.0.23",
   "description": "MikroORM in memory for unit tests",
   "main": "./dist/src/index.js",
   "scripts": {
